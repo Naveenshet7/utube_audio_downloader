@@ -39,11 +39,14 @@ def download_audio(video_url, confirm, audio_format):
         # Define the progress bar
         progress_bar = st.progress(0)
 
+        # Define the output folder for the downloaded files
+        download_folder = os.path.expanduser("~/Downloads")
+
         # Define the output file path based on the selected audio format
         if audio_format == "MP3":
-            output_file_path = video_title + ".mp3"
+            output_file_path = os.path.join(download_folder, video_title + ".mp3")
         elif audio_format == "OGG":
-            output_file_path = video_title + ".ogg"
+            output_file_path = os.path.join(download_folder, video_title + ".ogg")
 
         # Download the video as an audio file
         response = requests.get(audio.url, stream=True)
@@ -56,7 +59,7 @@ def download_audio(video_url, confirm, audio_format):
                 progress = (downloaded_size / total_size_in_bytes) * 100
                 progress_bar.progress(progress)
 
-        st.success(f"Audio downloaded successfully as '{video_title}.{audio_format.lower()}'")
+        st.success(f"Audio downloaded successfully as '{video_title}.{audio_format.lower()}' in the Downloads folder.")
 
         # Display a congratulatory message
         st.balloons()
@@ -91,12 +94,3 @@ audio_format = st.selectbox("Select Audio Format", ["MP3", "OGG"])
 if st.button("Download Audio"):
     # Call the download function with confirmation status and selected audio format
     download_audio(video_url, confirmation, audio_format)
-
-# Developer information
-st.sidebar.title("Dev")
-st.sidebar.markdown(
-    """
-    **Developer:** NK21
-    https://t.me/technicalsagar7
-    """
-)
