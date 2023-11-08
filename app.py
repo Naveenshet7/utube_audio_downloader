@@ -1,110 +1,84 @@
-import pytube
 import streamlit as st
-import requests
+from st_clickable_images import clickable_images
+import pandas as pd
+from pytube import YouTube
 import os
-import base64
+import requests
+from time import sleep
 
-
-# Function to sanitize a string for use as a filename
-def sanitize_filename(filename):
-    # Replace invalid characters with underscores
-    invalid_characters = '\\/:*?"<>|'
-    for char in invalid_characters:
-        filename = filename.replace(char, '_')
-    return filename
-
-def get_file_size(video_url):
+@st.cache_data
+def save_audio(url):
+    yt = YouTube(url)
     try:
-        yt = pytube.YouTube(video_url)
         video = yt.streams.filter(only_audio=True).first()
-        file_size = video.filesize
-        return file_size
-    except Exception as e:
-        return None
+        out_file = video.download()
+        
+        # Calculate file size
+        file_size = os.path.getsize(out_file) / (1024 * 1024)  # Convert to MB
 
-def download_audio(video_url, confirm, audio_format):
-    try:
-        if not confirm:
-            st.warning("Please confirm that you want to download the audio.")
-            return
-
-        # Create a YouTube object from the URL
-        yt = pytube.YouTube(video_url)
-
-        # Get the best video stream with audio
-        audio = yt.streams.filter(only_audio=True).first()
-
-        # Get the video title and sanitize it for use as the filename
-        video_title = sanitize_filename(yt.title)
-        st.info(f"Downloading: {video_title}")
-
-        # Define the output file path based on the selected audio format
-        if audio_format == "MP3":
-            output_file_path = video_title + ".mp3"
-        elif audio_format == "OGG":
-            output_file_path = video_title + ".ogg"
-
-        # Download the video as an audio file
-        response = requests.get(audio.url, stream=True)
-        total_size_in_bytes = int(response.headers.get('content-length', 0))
-
-        with open(output_file_path, "wb") as f:
-            for data in response.iter_content(chunk_size=1024):
-                f.write(data)
-                downloaded_size = len(data)
-
-        st.success(f"Audio downloaded successfully as '{video_title}.{audio_format.lower()}'")
-
-        return output_file_path, video_title
-
-    except pytube.exceptions.RegexMatchError:
-        st.error("Invalid YouTube URL. Please enter a valid YouTube video URL.")
-    except Exception as e:
-        st.error(f"An error occurred: {str(e)}")
+        base, ext = os.path.splitext(out_file)
+        file_name = base + '.mp3'
+        
+        # Check if the destination file already exists
+        if os.path.exists(file_name):
+            os.remove(file_name)  # Delete the existing file
+        
+        os.rename(out_file, file_name)
+    except:
+        return None, None, None, None
+    print(yt.title + " has been successfully downloaded.")
+    print(file_name)
+    return yt.title, file_name, yt.thumbnail_url, file_size
 
 st.title("YouTube Audio Downloader")
 
-# Input field for YouTube video URL
-video_url = st.text_input("Enter YouTube Video URL:")
+file = st.file_uploader("Upload a file that includes the links (.txt)")
 
-# Button to submit the YouTube URL
-if st.button("Enter"):
-    # Calculate and display audio file size
-    file_size = get_file_size(video_url)
-    if file_size:
-        st.info(f"Estimated Audio File Size is: {file_size / (1024 * 1024):.2f} MB")
-    else:
-        st.warning("File size information is not available for this video.")
+if file is not None:
+    dataframe = pd.read_csv(file, header=None)
+    dataframe.columns = ['urls']
+    urls_list = dataframe['urls'].tolist()
 
-# Checkbox for confirmation
-confirmation = st.checkbox("Confirm to download this Audio")
+    titles = []
+    locations = []
+    thumbnails = []
+    file_sizes = []
 
-# Select audio format
-audio_format = st.selectbox("Select Audio Format", ["MP3", "OGG"])
+    for video_url in urls_list:
+        # download audio
+        video_title, save_location, video_thumbnail, file_size = save_audio(video_url)
+        if video_title:
+            titles.append(video_title)
+            locations.append(save_location)
+            thumbnails.append(video_thumbnail)
+            file_sizes.append(file_size)
 
-# Button to trigger the download process
-if st.button("Download Audio"):
-    # Call the download function with confirmation status and selected audio format
-    output_file_path, video_title = download_audio(video_url, confirmation, audio_format)
+    selected_video = clickable_images(thumbnails,
+    titles = titles,
+    div_style={"height": "230px", "display": "flex", "justify-content": "center", "flex-wrap": "wrap", "overflow-y":"auto"},
+    img_style={"margin": "8px", "height": "200px"}
+    )
 
-# Function to create a download link
-def create_download_link(file_path, audio_format, video_title):
-    with open(file_path, "rb") as file:
-        file_contents = file.read()
-    b64 = base64.b64encode(file_contents).decode()
-    return f'<a href="data:file/{audio_format};base64,{b64}" download="{video_title}.{audio_format.lower()}">Click here to download</a>'
+    st.markdown(f"Thumbnail #{selected_video} clicked" if selected_video > -1 else "No image clicked")
 
-# Display a download link if the audio file exists
-if 'output_file_path' in locals():
-    st.write("Download your audio:")
-    st.markdown(create_download_link(output_file_path, audio_format, video_title), unsafe_allow_html=True)
-    st.balloons() 
-    
-# Developer information
+    if selected_video > -1:
+        video_url = urls_list[selected_video]
+        video_title = titles[selected_video]
+        save_location = locations[selected_video]
+        size_mb = file_sizes[selected_video]
+
+        st.header(video_title)
+        st.write(f"File Size: {size_mb:.2f} MB")  # Display the file size before playing audio
+        st.audio(save_location)
+        
+        # Trigger balloon animation when the image is clicked
+        if st.button("NK21❤️"):
+            st.balloons()
+        # Developer information
 st.sidebar.title("Dev")
 st.sidebar.markdown(
     """
     **Developer:** NK21
     https://t.me/technicalsagar7
     """
-)
+)    
