@@ -1,2 +1,6 @@
+altair
+pandas
 pytube
+requests
+st_clickable_images
 streamlit
