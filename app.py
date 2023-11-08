@@ -5,6 +5,7 @@ from pytube import YouTube
 import os
 import requests
 from time import sleep
+import base64  # Import base64 module for encoding the MP3 file
 
 @st.cache_data
 def save_audio(url):
@@ -70,15 +71,24 @@ if file is not None:
         st.header(video_title)
         st.write(f"File Size: {size_mb:.2f} MB")  # Display the file size before playing audio
         st.audio(save_location)
+
+        # Button to generate download link
+        if st.button("Generate Download Link"):
+            with open(save_location, 'rb') as file:
+                audio_data = file.read()
+                # Encode the MP3 file as a data URI for download
+                audio_base64 = base64.b64encode(audio_data).decode()
+                st.markdown(f'<a href="data:audio/mp3;base64,{audio_base64}" download="{video_title}.mp3">Download {video_title}.mp3</a>', unsafe_allow_html=True)
         
         # Trigger balloon animation when the image is clicked
         if st.button("NK21❤️"):
             st.balloons()
-        # Developer information
+
+# Developer information
 st.sidebar.title("Dev")
 st.sidebar.markdown(
     """
     **Developer:** NK21
     https://t.me/technicalsagar7
     """
-)    
+)
