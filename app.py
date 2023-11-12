@@ -31,7 +31,7 @@ def save_audio(url):
     print(file_name)
     return yt.title, file_name, yt.thumbnail_url, file_size
 
-st.title("Utube Audio Downloader")
+st.title("U2B Audio Downloader")
 
 file = st.file_uploader("Upload a file that includes the links (.txt)")
 
